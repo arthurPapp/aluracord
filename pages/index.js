@@ -1,34 +1,11 @@
 import { Box, Button, Text, TextField, Image } from '@skynexui/components';
+import React from 'react';
+
+//importando next
+import { useRouter } from 'next/router'
 import appConfig from '../config.json'
 
-function GlobalStyle() {
-    return (
-        <style global jsx>{`
-           * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-                list-style: none;
-            }
-            body {
-                font-family: 'Open Sans', sans-serif;
-            }
-            /* App fit Height */ 
-            html, body, #__next {
-                min-height: 100vh;
-                display: flex;
-                flex: 1;
-            }
-            #__next {
-                flex: 1;
-            }
-            #__next > * {
-                flex: 1;
-            }
-            /* ./App fit Height */ 
-        `}</style>
-    )
-}
+
 
 //repartindo componentes
 function Titulo(props) {
@@ -56,11 +33,13 @@ function Titulo(props) {
 
 //export default utilizado para forma default da pagina 
 export default function PaginaInicial() {
-    const username = 'arthurPapp';
-
+    // const username = 'arthurPapp';
+    const [username, setUsername] = React.useState('anonimo');
+    const roteamento = useRouter();
+    const [mostraImagem, setmostraImagem] = React.useState('https://art.pixilart.com/ef9ac2360ea67b0.png');
     return (
         <>
-            <GlobalStyle />
+
             <Box
                 styleSheet={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -87,6 +66,12 @@ export default function PaginaInicial() {
                     {/* Formulário */}
                     <Box
                         as="form"
+                        onSubmit={function (infosDoEvento) {
+                            infosDoEvento.preventDefault();
+                            //hoteamento nextJs
+                            roteamento.push('/chat')
+
+                        }}
                         styleSheet={{
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                             width: { xs: '100%', sm: '50%' }, textAlign: 'center', marginBottom: '32px',
@@ -107,6 +92,18 @@ export default function PaginaInicial() {
                                     backgroundColor: appConfig.theme.colors.neutrals[800],
                                 },
                             }}
+                            value={username}
+                            onChange={function (event) {
+                                console.log(event.target.value);
+                                //Trocando o valor da variavel atravez do react
+                                setUsername(event.target.value);
+                                if (event.target.value.length > 2) {
+                                    setmostraImagem(`https://github.com/${event.target.value}.png`)
+                                } else {
+                                    setmostraImagem(`https://art.pixilart.com/ef9ac2360ea67b0.png`)
+                                }
+
+                            }}
                         />
                         <Button
                             type='submit'
@@ -119,6 +116,7 @@ export default function PaginaInicial() {
                                 mainColorStrong: appConfig.theme.colors.primary[600],
                             }}
                         />
+
                     </Box>
                     {/* Formulário */}
 
@@ -144,7 +142,7 @@ export default function PaginaInicial() {
                                 borderRadius: '50%',
                                 marginBottom: '16px',
                             }}
-                            src={`https://github.com/${username}.png`}
+                            src={mostraImagem}
                         />
                         <Text
                             variant="body4"
@@ -159,8 +157,10 @@ export default function PaginaInicial() {
                         </Text>
                     </Box>
                     {/* Photo Area */}
+
                 </Box>
             </Box>
+
         </>
     );
 }
