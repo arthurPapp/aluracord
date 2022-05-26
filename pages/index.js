@@ -69,7 +69,8 @@ export default function PaginaInicial() {
                         onSubmit={function (infosDoEvento) {
                             infosDoEvento.preventDefault();
                             //hoteamento nextJs
-                            roteamento.push('/chat')
+                            //templateString não usa aspas simples e sim crase
+                            roteamento.push(`/chat?username=${username}`);
 
                         }}
                         styleSheet={{

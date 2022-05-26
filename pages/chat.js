@@ -1,32 +1,91 @@
 import { Box, Text, TextField, Image, Button } from '@skynexui/components';
+import { createClient } from '@supabase/supabase-js';
 import React from 'react';
 import appConfig from '../config.json'
+import { useRouter } from 'next/router'
+import { ButtonSendSticker } from '../src/components/ButtonSendSticker';
+import { MessageList } from '../src/components/MessageList';
+
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzem1ybnJzYmF1Z290emplb2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTI3MjA3NjIsImV4cCI6MTk2ODI5Njc2Mn0.EKdQx9nvPUs3QsBGUn0FtTeQuSFOGhrotzzVa3qbb1Y';
+const SUPABASE_URL = 'https://cszmrnrsbaugotzjeoli.supabase.co';
+const supabeseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function escutaMensagemEmTempoReal(adicionaMensagem) {
+    return supabeseClient
+        .from('mensagens')
+        .on('INSERT', (respostaLive) => {
+            // console.log('supabeseClient ' + respostaLive);
+            adicionaMensagem(respostaLive.new);
+        }).subscribe();
+}
+
+// fetch(`${SUPABASE_URL}/rest/v1/mensagens?select=*`, {
+//     headers: {
+//         'Content-Type': 'application/json',
+//         'apiKey': SUPABASE_ANON_KEY,
+//         'Authorizathion': 'Bearer ' + SUPABASE_ANON_KEY,
+//     }
+// }).then((res) => {
+//     return res.json();
+// }).then((response) => {
+//     console.log(response);
+
+// });
+
+/**
+ * Desafios 
+ * [] Tela de loading
+ * [] mouse ouver com profile da pessoal
+ * @returns 
+ */
 
 
 export default function ChatPage() {
-
+    const roteamento = useRouter();
+    const usuarioLogado = roteamento.query.username === '' ? 'anonimo' : roteamento.query.username;
     const [mensagem, setMensagem] = React.useState('');
     const [listaDeMensagens, setListaDeMensagens] = React.useState([]);
-    /*
-     1 usario digira menssagem - OK 
-     2 usuario aperta enter para enviar 
-     3 tem q add texto
 
-     DEV
-     [X]campo mgn
-     [X] onChange para usar o useState
-     [X]Listar mgn
+    //execulta quando acontece algum efeito(para lidar com aquilo q foge do fluxo padrão)
+    React.useEffect(() => {
+        //efeito colateral (não faz parte do fluxo padrão)
+        supabeseClient
+            .from('mensagens')
+            .select('*')
+            .order('id', { ascending: false })
+            .then(({ data }) => {
+                console.log(data);
+                setListaDeMensagens(data);
+            });
+        //Quero usar um valor de referencia (object/arrays)
+        //passar uma função pro setState
+        escutaMensagemEmTempoReal((novaMensagem) => {
+            // console.log('escutaMensagemEmTempoReal' + novaMensagem);
+            setListaDeMensagens((valorDaLista) => {
+                return [novaMensagem, ...valorDaLista]
+            });
+        });
 
-    */
+    }, []);
 
     function handlerNovaMensagem(novaMensagem) {
         const mensagem = {
             texto: novaMensagem,
-            de: 'user',
-            id: listaDeMensagens.length + 1
+            de: usuarioLogado,
+            // id: listaDeMensagens.length + 1
         };
+
+        if (mensagem.texto !== '') {
+            supabeseClient
+                .from('mensagens')
+                .insert([mensagem])
+                .then(({ data }) => {
+                    console.log('mensagem criada: ', data);
+                    // setListaDeMensagens([data[0], ...listaDeMensagens]);
+                });
+        }
         // se inverter a ordem entre as entrada e lista existente, muda a ordem de saida no map
-        setListaDeMensagens([mensagem, ...listaDeMensagens]);
+        //setListaDeMensagens([mensagem, ...listaDeMensagens]);
         setMensagem('');
     }
 
@@ -80,7 +139,7 @@ export default function ChatPage() {
 
                         onSubmit={function (event) {
                             event.preventDefault();
-                            console.log(event)
+                            // console.log(event)
                             handlerNovaMensagem(mensagem);
 
                         }}
@@ -88,13 +147,13 @@ export default function ChatPage() {
                         <TextField
                             value={mensagem}
                             onChange={(event) => {
-                                console.log(event.target.value);
+                                // console.log(event.target.value);
                                 setMensagem(event.target.value);
                             }}
                             onKeyPress={(event) => {
                                 if (event.key === 'Enter') {
                                     event.preventDefault();
-                                    console.log(event)
+                                    // console.log(event)
                                     handlerNovaMensagem(mensagem);
                                 }
                             }}
@@ -121,6 +180,12 @@ export default function ChatPage() {
                                 mainColorStrong: appConfig.theme.colors.primary[600],
                             }}
                         />
+                        {/* Callback = chamada de retorno */}
+                        <ButtonSendSticker
+                            onStickerClick={(sticker) => {
+                                handlerNovaMensagem(`:sticker:${sticker}`)
+                            }}
+                        />
                     </Box>
                 </Box>
             </Box>
@@ -143,99 +208,5 @@ function Header() {
                 />
             </Box>
         </>
-    )
-}
-
-function MessageList(props) {
-    console.log('MessageList', props);
-    return (
-
-        <Box
-            tag="ul"
-            styleSheet={{
-                overflow: 'scroll',
-                display: 'flex',
-                // flexDirection e onde manda na orde de apresentação
-                flexDirection: 'column-reverse',
-                flex: 1,
-                color: appConfig.theme.colors.neutrals["000"],
-                marginBottom: '16px',
-            }}
-        >
-            {props.mensagens.map((mensagem) => {
-                return (
-                    <Text
-                        key={mensagem.id}
-                        tag="li"
-                        styleSheet={{
-                            borderRadius: '5px',
-                            padding: '6px',
-                            marginBottom: '12px',
-                            hover: {
-                                backgroundColor: appConfig.theme.colors.neutrals[700],
-                            }
-                        }}
-                    >
-                        <Box
-                            styleSheet={{
-                                marginBottom: '8px',
-                            }}
-                        >
-                            <Image
-                                styleSheet={{
-                                    width: '20px',
-                                    height: '20px',
-                                    borderRadius: '50%',
-                                    display: 'inline-block',
-                                    marginRight: '8px',
-                                }}
-                                src={`https://github.com/vanessametonini.png`}
-                            />
-                            <Text tag="strong">
-                                {mensagem.de}
-                            </Text>
-                            <Text
-                                styleSheet={{
-                                    fontSize: '10px',
-                                    marginLeft: '8px',
-                                    color: appConfig.theme.colors.neutrals[300],
-                                }}
-                                tag="span"
-                            >
-                                {(new Date().toLocaleDateString())}
-                            </Text>
-                        </Box>
-                        {mensagem.texto}
-                        {/* <Button
-                            // type='submit'
-                            label='X'
-                            buttonColors={{
-                                contrastColor: appConfig.theme.colors.neutrals["000"],
-                                mainColor: appConfig.theme.colors.primary[500],
-                                mainColorLight: appConfig.theme.colors.primary[400],
-                                mainColorStrong: appConfig.theme.colors.primary[600],
-                            }}
-                            styleSheet={{
-                                display: 'inline',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                marginLeft: '90%',
-                                // width: '50px', maxWidth: '50px',
-                                borderRadius: '5px', padding: '5px',
-                                boxShadow: '0 2px 10px 0 rgb(0 0 0 / 20%)'
-                            }}
-                            onClick={function() {
-                                var mensagens = props.mensagens.filter(function (value, index, arr) {
-                                    console.log(mensagem.id);
-                                    return value = mensagem.id;
-                                });
-                                console.log('aa', mensagens);
-                            }}
-                        /> */}
-                    </Text>
-                );
-            })}
-
-        </Box>
     )
 }
